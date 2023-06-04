@@ -204,6 +204,8 @@ start_setup() {
   cd /opt/src || exit 1
 }
 
+# Check for lock on apt/dpkg files and wait if unavailable
+# Use a counter to avoid indefinite wait. Count 100 iterations and wait 3s each.
 wait_for_apt() {
   count=0
   apt_lk=/var/lib/apt/lists/lock
@@ -218,6 +220,7 @@ wait_for_apt() {
   done
 }
 
+# Execute apt-get update in non-interactive mode
 update_apt_cache() {
   bigecho "Installing packages required for setup..."
   export DEBIAN_FRONTEND=noninteractive
@@ -227,6 +230,17 @@ update_apt_cache() {
   ) || exiterr "'apt-get update' failed."
 }
 
+# Install packages needed for basic setup:
+# wget: to retrieve VPN setup files
+# dnsutils: to check for DNS resolution
+# openssl: to generate random numbers
+# iptables: to check firewall rules
+# grep: to check for strings in files
+# sed: to modify files
+# gawk: string manipulation
+# net-tools: ifconfig
+# iproute2: ip
+# send output to /dev/null to reduce clutter on shell
 install_setup_pkgs() {
   (
     set -x
@@ -319,6 +333,8 @@ get_helper_scripts() {
   bigecho "Downloading helper scripts..."
   base1="https://raw.githubusercontent.com/hwdsl2/setup-ipsec-vpn/master/extras"
   base2="https://gitlab.com/hwdsl2/setup-ipsec-vpn/-/raw/master/extras"
+
+  # Use IKEv2 
   sc1=ikev2setup.sh
   sc2=add_vpn_user.sh
   sc3=del_vpn_user.sh
@@ -411,6 +427,7 @@ EOF
   fi
 }
 
+# Create VPN configuration
 create_vpn_config() {
   bigecho "Creating VPN configuration..."
   L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
@@ -567,6 +584,7 @@ EOF
   fi
 }
 
+# Rewrite IPTables rules for VPN server
 update_iptables() {
   bigecho "Updating IPTables rules..."
   IPT_FILE=/etc/iptables.rules
@@ -622,6 +640,7 @@ apply_gcp_mtu_fix() {
   fi
 }
 
+# Set VPN service to start on boot
 enable_on_boot() {
   bigecho "Enabling services on boot..."
   IPT_PST=/etc/init.d/iptables-persistent
